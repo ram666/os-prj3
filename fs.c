@@ -22,6 +22,12 @@ int fs_create(char *name)
 {
   int i = 0;
   for (; i < MAX_FILE_COUNT; i++) {
+      if (strcmp(name, meta->fcb_list[i].file_name) == 0)
+        return -1;
+    }
+
+  i = 0;
+  for (; i < MAX_FILE_COUNT; i++) {
       if (meta->vcb.free_fcb[i] == 0)
         break;
     }
@@ -41,7 +47,35 @@ int fs_delete(char *name)
 
 int fs_read(int fildes, void *buffer, size_t nbyte)
 {
+  if (meta->fcb_list[fildes].is_opened == 0)
+    return -1;
 
+  if (meta->fcb_list[fildes].size < nbyte)
+    nbyte = meta->fcb_list[fildes].size;
+
+  int block = meta->fcb_list[fildes].first_block;
+
+  if (block == 0)
+    return -1;
+
+  char *temp = malloc(BLOCK_SIZE);
+  buffer = malloc(nbyte);
+
+  int i = 0;
+  while (nbyte > BLOCK_SIZE - 4) {
+      block_read(block, temp);
+      memcpy(buffer + (i * (BLOCK_SIZE - 4)), temp, BLOCK_SIZE - 4);
+
+      block = get_block_icon(temp);
+      nbyte -= BLOCK_SIZE - 4;
+      i++;
+    }
+  block_read(block, temp);
+  memcpy(buffer + (i * (BLOCK_SIZE - 4)), temp, nbyte);
+
+  free(temp);
+
+  return 0;
 }
 
 int get_block_icon(char *buffer)
@@ -56,15 +90,48 @@ int get_first_empty_block_from(int i)
   for (; i < DISK_BLOCKS; i++) {
       block_read(i, buffer);
       if (get_block_icon(buffer) == 0) {
+          free(buffer);
           return i;
         }
     }
+  free(buffer);
   return -1;
 }
 
 int get_first_empty_block()
 {
   return get_first_empty_block_from(1);
+}
+
+/**
+ * @brief write data of buffer into a block, from the beginning of block
+ * @param last  the last block used for writing (0 for searching from start)
+ * @param nbyte
+ * @return last block used in file
+ */
+int write_starting_from_block(int last, char *buffer, int *n_byte)
+{
+  int next, nbyte = *n_byte;
+  char *buff = (char *) malloc(BLOCK_SIZE);
+
+  int i = 0;
+  while (nbyte > BLOCK_SIZE - 4) {
+      next = get_first_empty_block_from(last + 1);
+      memcpy(buff, buffer + (i * (BLOCK_SIZE - 4)), BLOCK_SIZE - 4);
+      memcpy(buff + ((i + 1) * BLOCK_SIZE - 4), &next, 4);
+      block_write(last, buff);
+      last = next;
+      nbyte -= (BLOCK_SIZE - 4);
+      i++;
+    }
+
+  next = -1;
+  memset(buff, 0, BLOCK_SIZE);
+  memcpy(buff, buffer + (i * (BLOCK_SIZE - 4)), nbyte);
+  memcpy(buff + ((i + 1) * BLOCK_SIZE - 4), &next, 4);
+  block_write(last, buff);
+
+  return last;
 }
 
 // TODO: change 4 to sizeof(int)
@@ -83,23 +150,8 @@ int fs_write(int fildes, void *buffer, size_t nbyte)
       int last = get_first_empty_block();
       meta->fcb_list[fildes].first_block = last;
 
-      char *cpy = (char *) malloc(BLOCK_SIZE);
+      last = write_starting_from_block(last - 1, buffer, &nbyte);
 
-      int i = 0;
-      while (nbyte > BLOCK_SIZE - 4) {
-          int next = get_first_empty_block_from(last + 1);
-          memcpy(cpy, buffer + (i * (BLOCK_SIZE - 4)), BLOCK_SIZE - 4);
-          memcpy(cpy + ((i + 1) * BLOCK_SIZE - 4), &next, 4);
-          block_write(last, cpy);
-          last = next;
-          nbyte -= (BLOCK_SIZE - 4);
-          i++;
-        }
-      int next = -1;
-      memset(cpy, 0, BLOCK_SIZE);
-      memcpy(cpy, buffer + (i * (BLOCK_SIZE - 4)), nbyte);
-      memcpy(cpy + ((i + 1) * BLOCK_SIZE - 4), &next, 4);
-      block_write(last, cpy);
       meta->fcb_list[fildes].last_block = last;
       meta->fcb_list[fildes].last_block_used = nbyte;
 
@@ -124,6 +176,7 @@ int fs_write(int fildes, void *buffer, size_t nbyte)
           memcpy(buff + (meta->fcb_list[fildes].last_block_used),
                  buffer,
                  (BLOCK_SIZE - 4 - meta->fcb_list[fildes].last_block_used));
+
           int next = get_first_empty_block();
           memcpy(buff + (BLOCK_SIZE - 4), &next, 4);
           block_write(last, buff);
@@ -131,27 +184,12 @@ int fs_write(int fildes, void *buffer, size_t nbyte)
           last = next;
           nbyte -= (BLOCK_SIZE - 4 - meta->fcb_list[fildes].last_block_used);
 
-          int i = 0;
-          while (nbyte > BLOCK_SIZE - 4) {
-              next = get_first_empty_block_from(last + 1);
-              memcpy(buff, buffer + (i * (BLOCK_SIZE - 4)), BLOCK_SIZE - 4);
-              memcpy(buff + ((i + 1) * BLOCK_SIZE - 4), &next, 4);
-              block_write(last, buff);
-              last = next;
-              nbyte -= (BLOCK_SIZE - 4);
-              i++;
-            }
+          last = write_starting_from_block(last, buffer, &nbyte);
 
-          next = -1;
-          memset(buff, 0, BLOCK_SIZE);
-          memcpy(buff, buffer + (i * (BLOCK_SIZE - 4)), nbyte);
-          memcpy(buff + ((i + 1) * BLOCK_SIZE - 4), &next, 4);
-          block_write(last, buff);
           meta->fcb_list[fildes].last_block = last;
           meta->fcb_list[fildes].last_block_used = nbyte;
 
           metadata_rewrite();
-
         }
     }
 }
