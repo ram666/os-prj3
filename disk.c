@@ -129,10 +129,12 @@ int block_read(int block, char *buf)
 
 int make_fs(char *disk_name)
 {
+  // check file existance
   if (access(disk_name, F_OK) != -1)
     return -1;
 
   if (make_disk(disk_name) == 0) {
+      // initialize a VCB
       struct vcb _vcb;
       memset(&_vcb, 0, sizeof(struct vcb));
       _vcb.free_block_count = DISK_BLOCKS;
@@ -165,10 +167,12 @@ int mount_fs(char *disk_name)
   void *temp = malloc(BLOCK_SIZE);
   memset(temp, 0, BLOCK_SIZE);
 
+  // read metadata from disk and put it in RAM
   block_read(0, temp);
   meta = (struct metadata *) temp;
 
-  if (meta->disk_blocks != DISK_BLOCKS) // validation
+  // validation for checking true filesystem
+  if (meta->disk_blocks != DISK_BLOCKS)
     return -1;
 
   strcpy(open_disk_name, disk_name);

@@ -45,9 +45,9 @@ int mount_fs(char *disk_name);
 int umount_fs(char *disk_name);
 
 /**
- * @brief metadata_rewrite
+ * @brief rewrite metadata in disk
  * Assumes the disk is mounted
- * @return -1 in case of error, 0 i
+ * @return -1 in case of error, 0 in case of success
  */
 int metadata_rewrite();
 
