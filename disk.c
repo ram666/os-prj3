@@ -10,6 +10,9 @@
 
 static int active = 0;  /* is the virtual disk open (active) */
 static int handle;      /* file handle to virtual disk       */
+static char open_disk_name[128];
+
+struct metadata *meta;
 
 int make_disk(char *name)
 { 
@@ -126,19 +129,84 @@ int block_read(int block, char *buf)
 
 int make_fs(char *disk_name)
 {
+  if (access(disk_name, F_OK) != -1)
+    return -1;
 
   if (make_disk(disk_name) == 0) {
+      struct vcb _vcb;
+      memset(&_vcb, 0, sizeof(struct vcb));
+      _vcb.free_block_count = DISK_BLOCKS;
+      _vcb.free_fcb_count = MAX_FILE_COUNT;
 
+      struct metadata _meta;
+      memset(&_meta, 0, sizeof(struct metadata));
+      _meta.vcb = _vcb;
+      _meta.disk_blocks = DISK_BLOCKS;
+
+      _meta.free[0].start_block = 1;
+      _meta.free[0].size = DISK_BLOCKS - 1;
+
+      int i = 0;
+      for (; i < MAX_FILE_COUNT + 1; i++) {
+          _meta.free[i].start_block = DISK_BLOCKS - 1;
+          _meta.free[i].size = 0;
+        }
+
+      void *temp = malloc(BLOCK_SIZE);
+      memset(temp, 0, BLOCK_SIZE);
+      memcpy(temp, &_meta, sizeof(struct metadata));
+
+      open_disk(disk_name);
+      block_write(0, temp);
+      close_disk(disk_name);
+
+      return 0;
     }
-  return 0;
+  return -1;
 }
 
 int mount_fs(char *disk_name)
 {
+  if (active != 0)
+    return -1;
+  if (open_disk(disk_name) == -1)
+    return -1;
 
+  void *temp = malloc(BLOCK_SIZE);
+  memset(temp, 0, BLOCK_SIZE);
+
+  block_read(0, temp);
+  meta = (struct metadata *) temp;
+
+  if (meta->disk_blocks != DISK_BLOCKS) // validation
+    return -1;
+
+  strcpy(open_disk_name, disk_name);
+
+  return 0;
 }
 
 int umount_fs(char *disk_name)
 {
+  if (active != 1)
+    return -1;
+  if (strcmp(open_disk_name, disk_name) != 0)
+    return -1;
 
+  if (metadata_rewrite() == -1)
+    return -1;
+
+  if (close_disk() == -1)
+    return -1;
+
+  return 0;
+}
+
+int metadata_rewrite()
+{
+  void *temp = malloc(BLOCK_SIZE);
+  memset(temp, 0, BLOCK_SIZE);
+  memcpy(temp, meta, sizeof(struct metadata));
+
+  return block_write(0, temp);
 }
