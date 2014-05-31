@@ -8,11 +8,9 @@
 
 #include "disk.h"
 
-/******************************************************************************/
 static int active = 0;  /* is the virtual disk open (active) */
 static int handle;      /* file handle to virtual disk       */
 
-/******************************************************************************/
 int make_disk(char *name)
 { 
   int f, cnt;
@@ -124,4 +122,23 @@ int block_read(int block, char *buf)
   }
 
   return 0;
+}
+
+int make_fs(char *disk_name)
+{
+
+  if (make_disk(disk_name) == 0) {
+
+    }
+  return 0;
+}
+
+int mount_fs(char *disk_name)
+{
+
+}
+
+int umount_fs(char *disk_name)
+{
+
 }
