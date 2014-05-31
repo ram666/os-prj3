@@ -59,7 +59,6 @@ int fs_read(int fildes, void *buffer, size_t nbyte)
     return -1;
 
   char *temp = malloc(BLOCK_SIZE);
-  buffer = malloc(nbyte);
 
   int i = 0;
   while (nbyte > BLOCK_SIZE - 4) {
@@ -72,8 +71,6 @@ int fs_read(int fildes, void *buffer, size_t nbyte)
     }
   block_read(block, temp);
   memcpy(buffer + (i * (BLOCK_SIZE - 4)), temp, nbyte);
-
-  free(temp);
 
   return 0;
 }
