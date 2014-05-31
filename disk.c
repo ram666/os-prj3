@@ -143,15 +143,6 @@ int make_fs(char *disk_name)
       _meta.vcb = _vcb;
       _meta.disk_blocks = DISK_BLOCKS;
 
-      _meta.free[0].start_block = 1;
-      _meta.free[0].size = DISK_BLOCKS - 1;
-
-      int i = 0;
-      for (; i < MAX_FILE_COUNT + 1; i++) {
-          _meta.free[i].start_block = DISK_BLOCKS - 1;
-          _meta.free[i].size = 0;
-        }
-
       void *temp = malloc(BLOCK_SIZE);
       memset(temp, 0, BLOCK_SIZE);
       memcpy(temp, &_meta, sizeof(struct metadata));

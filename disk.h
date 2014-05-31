@@ -12,8 +12,10 @@
  */
 struct fcb {
   char file_name[20];
+  unsigned char is_opened;
   unsigned int size;
   unsigned int first_block;
+  unsigned int last_block;
   unsigned int last_block_used; // n-bytes used from last block
 } __attribute__((packed));
 
