@@ -24,7 +24,6 @@ struct fcb {
  */
 struct vcb {
   int free_block_count;
-  int free_fcb_count;
   unsigned char free_fcb[MAX_FILE_COUNT];
 } __attribute__((packed));
 

@@ -136,7 +136,6 @@ int make_fs(char *disk_name)
       struct vcb _vcb;
       memset(&_vcb, 0, sizeof(struct vcb));
       _vcb.free_block_count = DISK_BLOCKS;
-      _vcb.free_fcb_count = MAX_FILE_COUNT;
 
       struct metadata _meta;
       memset(&_meta, 0, sizeof(struct metadata));

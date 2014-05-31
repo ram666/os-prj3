@@ -42,7 +42,34 @@ int fs_create(char *name)
 
 int fs_delete(char *name)
 {
+  int i = 0;
+  for (; i < MAX_FILE_COUNT; i++) {
+      if (strcmp(name, meta->fcb_list[i].file_name) == 0)
+        break;
+    }
+  if(meta->fcb_list[i].is_opened == 0)
+    return -1;
+  if(meta->fcb_list[i].size == 0)
+    return -1;
 
+  int current_block = meta->fcb_list[i].first_block;
+  char *buffer = (char*)malloc(BLOCK_SIZE);
+  int next_block = current_block;
+  do{
+      current_block = next_block ;
+      block_read(current_block,buffer);
+      next_block = get_block_icon(buffer);
+      memset(buffer,0,BLOCK_SIZE);
+      block_write(current_block,buffer);
+      meta->vcb.free_block_count ++;
+
+    }while(next_block >0);
+  meta->vcb.free_fcb[i] = 0;
+  memset(meta->fcb_list[i].file_name,0,20);
+  meta->fcb_list[i].first_block = 0;
+  meta->fcb_list[i].last_block = 0;
+  meta->fcb_list[i].last_block_used = 0;
+  meta->fcb_list[i].size = 0;
 }
 
 int fs_read(int fildes, void *buffer, size_t nbyte)
@@ -58,7 +85,7 @@ int fs_read(int fildes, void *buffer, size_t nbyte)
   if (block == 0)
     return -1;
 
-  char *temp = malloc(BLOCK_SIZE);
+  char *temp = (char*)malloc(BLOCK_SIZE);
 
   int i = 0;
   while (nbyte > BLOCK_SIZE - 4) {
