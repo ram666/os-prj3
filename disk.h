@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 #define DISK_BLOCKS     8192      /* number of blocks on the disk                */
-#define BLOCK_SIZE      4096      /* block size on "disk"                        */
+#define BLOCK_SIZE      4096      /* block size on "disk"    4KB                  */
 #define MAX_FILE_COUNT  64
 
 /**
