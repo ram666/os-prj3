@@ -130,7 +130,7 @@ int block_read(int block, char *buf)
 int make_fs(char *disk_name)
 {
   // check file existance
-  if (access(disk_name, F_OK) != -1)
+  if (access(disk_name, F_OK) != -1)//doubt
     return -1;
 
   if (make_disk(disk_name) == 0) {
@@ -146,7 +146,7 @@ int make_fs(char *disk_name)
 
       void *temp = malloc(BLOCK_SIZE);
       memset(temp, 0, BLOCK_SIZE);
-      memcpy(temp, &_meta, sizeof(struct metadata));
+      memcpy(temp, &_meta, sizeof(struct metadata));//copied to temp from meta
 
       open_disk(disk_name);
       block_write(0, temp);
